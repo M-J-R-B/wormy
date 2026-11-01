@@ -67,3 +67,39 @@ export function readiness(S, b) {
   if (!days.length) reason = "No temp readings since it started resting.";
   return { count: Math.min(count, st.readings), need: st.readings, ready: count >= st.readings, latest, reason: count >= st.readings ? "" : reason };
 }
+
+export function alerts(S, now = new Date()) {
+  const st = settingsOf(S), out = [];
+  const checks = events(S).filter(e => e.type === "check");
+  const lastCheck = checks[0];
+  const lastBin = checks.find(e => e.binTemp != null);
+  if (lastBin && lastBin.binTemp > st.maxTemp) out.push({ k: "bad", ic: "🌡️", t: `Worm bin is hot: ${lastBin.binTemp}°C`, d: "ANC get stressed above ~30°C. Move to shade, mist lightly, add fresh bedding." });
+  if (lastCheck && lastCheck.activity === "escaping") out.push({ k: "bad", ic: "🚨", t: "Worms trying to escape", d: "Usually too wet, too hot, or unsafe food. Check moisture and smell; remove fresh food." });
+  if (lastCheck && lastCheck.moisture === "wet") out.push({ k: "warn", ic: "💧", t: "Bin is wet", d: "Add dry browns (shredded cardboard/paper) and hold off misting." });
+  if (lastCheck && lastCheck.moisture === "dry") out.push({ k: "warn", ic: "🏜️", t: "Bin is dry", d: "Mist until it feels like a wrung-out sponge." });
+  if (lastCheck && lastCheck.activity === "sluggish") out.push({ k: "warn", ic: "🐌", t: "Worms are sluggish", d: "Check temp, moisture and smell on the next check." });
+  if (!lastCheck) out.push({ k: "info", ic: "📝", t: "No bin check yet", d: "Log your first daily check to start tracking.", act: "check" });
+  else if (daysBetween(lastCheck.ts, now) >= st.checkinDays) out.push({ k: "warn", ic: "⏰", t: `No check-in for ${daysBetween(lastCheck.ts, now)} days`, d: "Do a quick bin check.", act: "check" });
+  for (const b of active(S)) {
+    if (b.status === "resting") {
+      const r = readiness(S, b);
+      if (r.ready) out.push({ k: "good", ic: "✅", t: `${bName(b)} looks ready`, d: `${r.need} steady, safe readings in a row. Confirm when it smells earthy.`, act: "ready:" + b.id, av: b.avatar });
+      else {
+        const has = batchReadings(S, b.id).some(x => x.day === today(now) && x.temp != null);
+        if (!has) out.push({ k: "info", ic: "🌡️", t: `Log today's temp for ${bName(b)}`, d: `Readiness ${r.count}/${r.need}.`, act: "check", av: b.avatar });
+      }
+    }
+    if (b.status === "filling" || b.status === "resting") {
+      const ls = lastStir(S, b) || b.createdAt;
+      const d = daysBetween(ls, now);
+      if (d >= st.stirDays) out.push({ k: "warn", ic: "🥄", t: `Stir ${bName(b)}`, d: `Last stirred ${ago(lastStir(S, b), now)}. Stirring keeps it aerobic.`, act: "check", av: b.avatar });
+      const sm = lastSmell(S, b);
+      if (sm === "sour" || sm === "ammonia") out.push({ k: "warn", ic: "👃", t: `${bName(b)} smelled ${sm}`, d: "Add browns (cardboard, paper, dry leaves) and stir.", av: b.avatar });
+    }
+  }
+  const all = active(S);
+  const feeding = all.filter(b => b.status === "feeding"), filling = all.filter(b => b.status === "filling"), pipeline = all.filter(b => b.status === "resting" || b.status === "ready");
+  if (!filling.length && batches(S).length) out.push({ k: "info", ic: "🪣", t: "No batch is filling", d: "Start a new batch for your scraps.", act: "newbatch" });
+  if (feeding.length && !pipeline.length && filling.length) out.push({ k: "info", ic: "📦", t: "Nothing resting for next feeding", d: "Consider marking your filling batch full so it has time to cool before the worms run out." });
+  return out;
+}
