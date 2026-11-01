@@ -1,9 +1,9 @@
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
-import "@fontsource/inter/600.css";
-import "@fontsource/inter/700.css";
-import "@fontsource/fraunces/600.css";
-import "@fontsource/fraunces/700.css";
+import "@fontsource/inter/latin-400.css";
+import "@fontsource/inter/latin-500.css";
+import "@fontsource/inter/latin-600.css";
+import "@fontsource/inter/latin-700.css";
+import "@fontsource/fraunces/latin-600.css";
+import "@fontsource/fraunces/latin-700.css";
 import "./styles.css";
 import { onUser, signIn } from "./auth.js";
 import { subscribe } from "./store.js";
