@@ -5,7 +5,6 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "apple-touch-icon-180x180.png"],
       manifest: {
         name: "Worm Bin Logbook",
         short_name: "Worm Log",

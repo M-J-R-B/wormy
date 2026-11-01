@@ -65,7 +65,12 @@ function avatarHtml(a,cls){
 }
 
 // ---------- render ----------
+let renderPending=false;
+const editing=()=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest("#app form"))};
+function softRender(){if(!signedIn)return;if(editing()){renderPending=true;return}render()}
+document.addEventListener("focusout",()=>setTimeout(()=>{if(renderPending&&!editing()){renderPending=false;render()}},0));
 function render(){
+  renderPending=false;
   const app=$("#app");
   let h=`<div class="wrap"><header class="top">${avatarHtml(S.bin.avatar)}<div class="grow"><h1>${esc(S.bin.name||"Worm bin")}</h1><div class="sub">Worm Bin Logbook</div></div></header>`;
   if(mode==="loading")h+=`<div class="banner">Loading your logbook…</div>`;
@@ -379,9 +384,9 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.close&&ev.target===t){closeSheet();return}
   if(t.dataset.tab){tab=t.dataset.tab;pendingDel=null;render();window.scrollTo(0,0);return}
   const act=t.dataset.act;
-  if(act){({check:sheetCheck,scraps:sheetScraps,feed:sheetFeed,harvest:sheetHarvest,note:sheetNote,newbatch:()=>sheetNewBatch(),editbin:sheetEditBin,
+  if(act){({check:sheetCheck,scraps:sheetScraps,feed:sheetFeed,harvest:sheetHarvest,note:sheetNote,newbatch:()=>{if(mode==="loading"){toast("Still loading your logbook — try again in a moment.");return}sheetNewBatch()},editbin:sheetEditBin,
     resetsettings:()=>put("config","settings",{...DEF}).then(()=>toast("Defaults restored")),
-    signout:()=>signOut(),
+    signout:()=>{if(!navigator.onLine&&!confirm("You're offline. You won't be able to sign back in until you're online. Sign out anyway?"))return;signOut()},
     copyjson:async()=>{try{await navigator.clipboard.writeText(JSON.stringify({bin:S.bin,settings:set(),batches:Object.values(S.batches),events:events()},null,2));toast("Copied")}catch(e){toast("Copy not allowed here")}}}[act]||(()=>{}))();return}
   if(t.dataset.open){sheetBatch(t.dataset.open);return}
   if(t.dataset.status){const id=t.dataset.id;await setStatus(id,t.dataset.status);if($(".sheet"))sheetBatch(id);return}
@@ -419,8 +424,8 @@ export function applyData(kind,data){
   if(kind==="batches")S.batches=data;else if(kind==="events")S.events=data;
   else if(kind==="settings")S.settings=data;else if(kind==="bin")S.bin=data;
   if(kind==="batches"||kind==="events")mode="ready";
-  if(signedIn)render();
+  softRender();
 }
-export function setNote(msg){if(note===msg)return;note=msg;if(signedIn)render()}
-export function setOnline(v){online=v;if(signedIn)render()}
+export function setNote(msg){if(note===msg)return;note=msg;softRender()}
+export function setOnline(v){online=v;softRender()}
 export function clearData(){S=freshState();closeSheet()}
