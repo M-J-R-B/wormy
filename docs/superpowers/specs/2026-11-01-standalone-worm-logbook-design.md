@@ -36,7 +36,7 @@ Static site, no server code. Source in `D:\worm-farm-tracker`, local git.
 | File | Responsibility | Depends on |
 |---|---|---|
 | `src/domain.js` | Pure logic moved from the artifact: date helpers (`dayKey`, `daysBetween`, `ago`, …), `batchReadings`, `lastStir`, `lastSmell`, `binTempOnDay`, `readiness`, `alerts`, `bName`/`bShort`. Functions take the state `S` (and `now` where time matters) as arguments instead of reading globals. | nothing |
-| `src/store.js` | The only Firebase data access. Exposes `put(coll, id, obj)`, `del(coll, id)`, `subscribe(uid, onChange, onError)`, and an online/offline status callback. | Firebase Firestore |
+| `src/store.js` | The only Firebase data access. Exposes `put(coll, id, obj)`, `del(coll, id)` and `subscribe(uid, {onData, onLoaded, onSlow, onError})`. Online/offline status comes from the browser's `online`/`offline` events in `main.js`. | Firebase Firestore |
 | `src/auth.js` | `signIn(email, password)`, `signOut()`, `onUser(cb)`. | Firebase Auth |
 | `src/firebase.js` | Initialises the Firebase app from `firebase-config.js`, with Firestore's persistent local cache (multi-tab) and Auth with IndexedDB persistence. | Firebase SDK |
 | `src/firebase-config.js` | The project's public web config object. | — |
